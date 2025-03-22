@@ -30,19 +30,20 @@ configure_service() {
 }
 
 configure_system_services() {
-    configure_service "interface-renaming"
-    rm -rf systemd-services
-}
-
-configure_ssh() {
     systemctl enable ssh
     systemctl start ssh
+
+    configure_service "interface-renaming"
+    
+    rm -rf systemd-services
 }
 
 main() {
     install_packages
-    configure_ssh
-    configure_system_services
+    
+    configure_systemd_services
+
+    reboot
 }
 
 main

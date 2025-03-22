@@ -31,6 +31,7 @@ configure_service() {
 
 configure_system_services() {
     configure_service "interface-renaming"
+    rm -rf systemd-services
 }
 
 configure_ssh() {

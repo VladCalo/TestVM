@@ -1,6 +1,8 @@
 [Unit]
 Description=Rename network interfaces
-After=network.target
+After=NetworkManager.service
+Wants=NetworkManager.service
+Requires=NetworkManager.service
 
 [Service]
 Type=oneshot

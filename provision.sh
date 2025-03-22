@@ -24,12 +24,11 @@ configure_service() {
 
     chmod +x /usr/bin/${script_file}
 
-    systemctl start ${service_folder}
     systemctl enable ${service_folder}
     systemctl daemon-reload
 }
 
-configure_system_services() {
+configure_systemd_services() {
     systemctl enable ssh
     systemctl start ssh
 
@@ -40,7 +39,7 @@ configure_system_services() {
 
 main() {
     install_packages
-    
+
     configure_systemd_services
 
     reboot

@@ -1,0 +1,11 @@
+[Unit]
+Description=Rename network interfaces
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/interfaces-renaming.sh
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

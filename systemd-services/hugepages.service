@@ -1,0 +1,11 @@
+[Unit]
+Description=Configure Hugepages for DPDK
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "mkdir -p /mnt/huge && mount -t hugetlbfs nodev /mnt/huge && echo 1024 > /proc/sys/vm/nr_hugepages"
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

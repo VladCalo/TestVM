@@ -4,7 +4,9 @@ test interfaces are internal network (intnet) and type virtio
 
 
 to do:
-rename interfaces in grub
 set ip for test interfaces (temporar => va fi facut din CLI)
-interface reordering service
 
+
+
+
+sudo dpdk-testpmd -l 0-1 -n 4 -a 0000:02:00.0 -- -i --port-topology=paired

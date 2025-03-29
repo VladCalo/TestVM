@@ -9,39 +9,57 @@ install_packages() {
         curl \
         vim \
         openssh-server \
-        openssh-client
+        openssh-client \
+        iperf3 \
+        meson \
+        ninja-build \
+        build-essential \
+        pkg-config \
+        libnuma-dev \
+        python3 \
+        python3-pip \
+        python3-pyelftools
 }
 
-configure_service() {
-    local service_folder=${1}
-    cd systemd-services/${service_folder}
+build_DPDK() {
+    cd TrafficEngine/dpdk-*/
 
-    service_file=$(ls *.service)
-    script_file=$(ls *.sh)
-
-    mv ${service_file} /etc/systemd/system/
-    mv ${script_file} /usr/bin/
-
-    chmod +x /usr/bin/${script_file}
-
-    systemctl enable ${service_folder}
-    systemctl daemon-reload
+    meson -Dexamples=all build
+    ninja -C build
+    cd build
+    ninja install
+    ldconfig
 }
 
-configure_systemd_services() {
-    systemctl enable ssh
-    systemctl start ssh
+configure_DPDK() {
+    modprobe uio
+    modprobe uio_pci_generic
+    echo "uio" >> /etc/modules
+    echo "uio_pci_generic" >> /etc/modules
 
-    configure_service "interface-renaming"
-    
-    rm -rf systemd-services
+    sed -i 's/\(GRUB_CMDLINE_LINUX=".*\)"/\1 intel_iommu=on"/' /etc/default/grub
+    update-grub
+    # pci id: basename $(readlink -f /sys/class/net/eth1/device/../)
+}
+
+install_DPDK(){
+    build_DPDK
+    configure_DPDK
+}
+
+configure_services() {
+    for svc in systemd-services/*.service; do
+        mv "$svc" /etc/systemd/system/
+        systemctl daemon-reload
+        systemctl enable $(basename -s .service "$svc")
+    done
 }
 
 main() {
     install_packages
-
-    configure_systemd_services
-
+    install_DPDK
+    configure_services
+    
     reboot
 }
 

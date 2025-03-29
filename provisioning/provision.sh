@@ -22,7 +22,7 @@ install_packages() {
 }
 
 build_DPDK() {
-    cd TrafficEngine/dpdk-*/
+    cd ../src/dpdk-*/
 
     meson -Dexamples=all build
     ninja -C build

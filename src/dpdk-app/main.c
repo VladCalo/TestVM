@@ -76,7 +76,7 @@ static void dpdk_loop(int client_sock) {
         uint16_t nb_rx = rte_eth_rx_burst(rx_port, 0, bufs, BURST_SIZE);
         for (uint16_t i = 0; i < nb_rx; i++) {
             uint16_t len = rte_pktmbuf_pkt_len(bufs[i]);
-            printf("Received packet of length: %u\n", len);
+	    printf("Received packet of length: %u\n", len);
             rte_memcpy(rx_buf, rte_pktmbuf_mtod(bufs[i], void *), len);
             send(client_sock, &len, sizeof(len), 0);
             send(client_sock, rx_buf, len, 0);

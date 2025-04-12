@@ -17,17 +17,16 @@ install_packages() {
         libnuma-dev \
         python3 \
         python3-pip \
-        python3-pyelftools
+        python3-pyelftools \
+        python3-scapy
 }
 
 build_DPDK() {
     cd ../src/dpdk-*/
 
-    meson -Dexamples=all build
-    #meson setup build --default-library=shared
+    meson setup build
     ninja -C build
-    cd build
-    ninja install
+    ninja -C build install
     ldconfig
 }
 
@@ -57,7 +56,8 @@ main() {
     install_packages
     install_DPDK
     configure_HugePages
-    
+    # make custom dpdk app and run it with: sudo ./dpdk_app -l 0-1 -n 4 --log-level=8
+
     reboot
 }
 

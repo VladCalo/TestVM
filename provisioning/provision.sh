@@ -10,7 +10,6 @@ install_packages() {
         vim \
         openssh-server \
         openssh-client \
-        iperf3 \
         meson \
         ninja-build \
         build-essential \
@@ -25,6 +24,7 @@ build_DPDK() {
     cd ../src/dpdk-*/
 
     meson -Dexamples=all build
+    #meson setup build --default-library=shared
     ninja -C build
     cd build
     ninja install
@@ -47,18 +47,16 @@ install_DPDK(){
     configure_DPDK
 }
 
-configure_services() {
-    for svc in systemd-services/*.service; do
-        mv "$svc" /etc/systemd/system/
-        systemctl daemon-reload
-        systemctl enable $(basename -s .service "$svc")
-    done
+configure_HugePages() {
+    mv systemd-services/hugepages.service /etc/systemd/system
+    systemctl daemon-reload
+    systemctl enable hugepages.service
 }
 
 main() {
     install_packages
     install_DPDK
-    configure_services
+    configure_HugePages
     
     reboot
 }

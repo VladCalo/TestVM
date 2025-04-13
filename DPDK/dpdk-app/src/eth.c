@@ -14,9 +14,10 @@
 static const struct rte_eth_conf port_conf_default = {0};
 
 struct rte_mempool* eth_init(uint16_t port_id) {
-    int ret = rte_eal_init(0, NULL); // actual EAL init already done in main
+    char pool_name[32];
+    snprintf(pool_name, sizeof(pool_name), "MBUF_POOL_%u", port_id);
 
-    struct rte_mempool *mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", NUM_MBUFS * 2,
+    struct rte_mempool *mbuf_pool = rte_pktmbuf_pool_create(pool_name, NUM_MBUFS * 2,
         MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 
     if (!mbuf_pool) {
@@ -24,6 +25,7 @@ struct rte_mempool* eth_init(uint16_t port_id) {
         return NULL;
     }
 
+    // init port using the same pool for both RX and TX
     if (rte_eth_dev_configure(port_id, 1, 1, &port_conf_default) < 0)
         rte_exit(EXIT_FAILURE, "Failed to configure port\n");
 

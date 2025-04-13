@@ -22,7 +22,7 @@ install_packages() {
 }
 
 build_DPDK() {
-    cd ../src/dpdk-*/
+    cd ../DPDK/dpdk-stable*/
 
     meson setup build
     ninja -C build

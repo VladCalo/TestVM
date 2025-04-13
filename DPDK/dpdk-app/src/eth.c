@@ -25,7 +25,6 @@ struct rte_mempool* eth_init(uint16_t port_id) {
         return NULL;
     }
 
-    // init port using the same pool for both RX and TX
     if (rte_eth_dev_configure(port_id, 1, 1, &port_conf_default) < 0)
         rte_exit(EXIT_FAILURE, "Failed to configure port\n");
 

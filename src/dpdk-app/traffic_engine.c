@@ -12,6 +12,7 @@
 
 static const struct rte_eth_conf port_conf_default = {0};
 
+//develop proto icmp
 int main(int argc, char *argv[]) {
     uint16_t port_id = 0;
     int is_tx = 0;

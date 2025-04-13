@@ -1,6 +1,6 @@
 APP = traffic_engine
 
-SRCS = traffic_engine.c src/eth.c
+SRCS = traffic_engine.c src/eth.c src/icmp.c
 INCLUDES = -Iinclude
 
 PKGCONF = pkg-config

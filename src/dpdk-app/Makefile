@@ -1,16 +1,19 @@
-# Makefile for DPDK-based app
+# Makefile for DPDK traffic_engine app
 
-APP = dpdk_app
-SRC = main.c
+APP = traffic_engine
+SRC = traffic_engine.c
 
-CFLAGS = -O3 -g -Wall -Wextra -I/usr/local/include -march=native
-LDFLAGS = -L/usr/local/lib -Wl,-rpath=/usr/local/lib
-LIBS = -lrte_eal -lrte_mbuf -lrte_mempool -lrte_ring -lrte_ethdev -pthread
+PKGCONF = pkg-config
+DPDK_CFLAGS = $(shell $(PKGCONF) --cflags libdpdk)
+DPDK_LDFLAGS = $(shell $(PKGCONF) --libs libdpdk)
+
+CFLAGS += -O3 -g -Wall $(DPDK_CFLAGS)
+LDFLAGS += $(DPDK_LDFLAGS)
 
 all: $(APP)
 
 $(APP): $(SRC)
-	$(CC) $(CFLAGS) $(SRC) -o $(APP) $(LDFLAGS) $(LIBS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:
 	rm -f $(APP)

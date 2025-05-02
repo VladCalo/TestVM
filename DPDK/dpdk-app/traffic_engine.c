@@ -2,6 +2,7 @@
 #include "include/eth.h"
 #include "include/icmp.h"
 #include "include/udp.h"
+#include "include/tcp.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -10,13 +11,14 @@ int main(int argc, char *argv[]) {
     int is_tx = 0;
     enum protocol_type proto = PROTO_ETH;
 
-    // Parse CLI: ./traffic_engine [tx|rx] [eth|icmp|udp]
+    // Parse CLI: ./traffic_engine [tx|rx] [eth|icmp|udp|tcp]
     if (argc > 1 && strcmp(argv[1], "tx") == 0)
         is_tx = 1;
 
     if (argc > 2) {
         if (strcmp(argv[2], "icmp") == 0) proto = PROTO_ICMP;
         else if (strcmp(argv[2], "udp") == 0) proto = PROTO_UDP;
+        else if (strcmp(argv[2], "tcp") == 0) proto = PROTO_TCP;
         else if (strcmp(argv[2], "eth") == 0) proto = PROTO_ETH;
     }
 
@@ -40,6 +42,11 @@ int main(int argc, char *argv[]) {
             udp_tx_loop(port_id, mbuf_pool);
         else
             udp_rx_loop(port_id);
+    } else if (proto == PROTO_TCP) {
+        if (is_tx)
+            tcp_tx_loop(port_id, mbuf_pool);
+        else
+            tcp_rx_loop(port_id);
     } else {
         if (is_tx)
             eth_tx_loop(port_id, mbuf_pool);

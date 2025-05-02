@@ -6,7 +6,8 @@
 
 enum protocol_type {
     PROTO_ETH,
-    PROTO_ICMP
+    PROTO_ICMP,
+    PROTO_UDP
 };
 
 void icmp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool);

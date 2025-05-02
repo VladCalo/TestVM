@@ -29,73 +29,67 @@ static uint16_t checksum(const void *data, size_t len) {
 }
 
 void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
-    uint32_t tx_seq = 1000;
-    uint32_t rx_ack = 0;
-    int state = 0; // 0 = SYN sent, 1 = SYN-ACK received, 2 = ACK sent
-
     while (1) {
-        if (state == 0) {
-            struct rte_mbuf *mbuf = rte_pktmbuf_alloc(mbuf_pool);
-            if (!mbuf) continue;
+        uint32_t tx_seq = 1000;
+        uint32_t rx_ack = 0;
 
-            size_t pkt_size = sizeof(struct rte_ether_hdr) + sizeof(struct rte_ipv4_hdr) + sizeof(struct rte_tcp_hdr);
-            char *pkt_data = rte_pktmbuf_append(mbuf, pkt_size);
-            if (!pkt_data) {
-                rte_pktmbuf_free(mbuf);
-                continue;
-            }
+        // Step 1: Send SYN
+        struct rte_mbuf *syn_pkt = rte_pktmbuf_alloc(mbuf_pool);
+        if (!syn_pkt) continue;
 
-            struct rte_ether_hdr *eth = (struct rte_ether_hdr *)pkt_data;
-            struct rte_ipv4_hdr *ip = (struct rte_ipv4_hdr *)(eth + 1);
-            struct rte_tcp_hdr *tcp = (struct rte_tcp_hdr *)(ip + 1);
+        size_t pkt_size = sizeof(struct rte_ether_hdr) + sizeof(struct rte_ipv4_hdr) + sizeof(struct rte_tcp_hdr);
+        char *data = rte_pktmbuf_append(syn_pkt, pkt_size);
+        struct rte_ether_hdr *eth = (struct rte_ether_hdr *)data;
+        struct rte_ipv4_hdr *ip = (struct rte_ipv4_hdr *)(eth + 1);
+        struct rte_tcp_hdr *tcp = (struct rte_tcp_hdr *)(ip + 1);
 
-            eth->src_addr = (struct rte_ether_addr){{0x00,0x11,0x22,0x33,0x44,0x55}};
-            eth->dst_addr = (struct rte_ether_addr){{0x52,0x54,0x00,0xa2,0x6c,0xb6}};
-            eth->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
+        eth->src_addr = (struct rte_ether_addr){{0x00,0x11,0x22,0x33,0x44,0x55}};
+        eth->dst_addr = (struct rte_ether_addr){{0x52,0x54,0x00,0xa2,0x6c,0xb6}};
+        eth->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
 
-            ip->version_ihl = 0x45;
-            ip->total_length = rte_cpu_to_be_16(sizeof(struct rte_ipv4_hdr) + sizeof(struct rte_tcp_hdr));
-            ip->time_to_live = 64;
-            ip->next_proto_id = IPPROTO_TCP;
-            ip->src_addr = rte_cpu_to_be_32(IPv4(10,0,0,1));
-            ip->dst_addr = rte_cpu_to_be_32(IPv4(10,0,0,2));
-            ip->hdr_checksum = 0;
-            ip->hdr_checksum = checksum(ip, sizeof(struct rte_ipv4_hdr));
+        ip->version_ihl = 0x45;
+        ip->total_length = rte_cpu_to_be_16(sizeof(struct rte_ipv4_hdr) + sizeof(struct rte_tcp_hdr));
+        ip->time_to_live = 64;
+        ip->next_proto_id = IPPROTO_TCP;
+        ip->src_addr = rte_cpu_to_be_32(IPv4(10,0,0,1));
+        ip->dst_addr = rte_cpu_to_be_32(IPv4(10,0,0,2));
+        ip->hdr_checksum = 0;
+        ip->hdr_checksum = checksum(ip, sizeof(struct rte_ipv4_hdr));
 
-            tcp->src_port = rte_cpu_to_be_16(TCP_SRC_PORT);
-            tcp->dst_port = rte_cpu_to_be_16(TCP_DST_PORT);
-            tcp->sent_seq = rte_cpu_to_be_32(tx_seq);
-            tcp->recv_ack = 0;
-            tcp->data_off = (sizeof(struct rte_tcp_hdr) / 4) << 4;
-            tcp->tcp_flags = RTE_TCP_SYN_FLAG;
-            tcp->rx_win = rte_cpu_to_be_16(65535);
-            tcp->cksum = 0;
+        tcp->src_port = rte_cpu_to_be_16(TCP_SRC_PORT);
+        tcp->dst_port = rte_cpu_to_be_16(TCP_DST_PORT);
+        tcp->sent_seq = rte_cpu_to_be_32(tx_seq);
+        tcp->recv_ack = 0;
+        tcp->data_off = (sizeof(struct rte_tcp_hdr) / 4) << 4;
+        tcp->tcp_flags = RTE_TCP_SYN_FLAG;
+        tcp->rx_win = rte_cpu_to_be_16(65535);
+        tcp->cksum = 0;
 
-            rte_eth_tx_burst(port_id, 0, &mbuf, 1);
-            printf("TX: Sent SYN with seq %u\n", tx_seq);
-            state = 1;
-            usleep(200000);
-        }
+        rte_eth_tx_burst(port_id, 0, &syn_pkt, 1);
+        printf("TX: Sent SYN\n");
 
-        if (state == 1) {
-            struct rte_mbuf *bufs[BURST_SIZE];
+        usleep(100000);
+
+        // Step 2: Wait for SYN-ACK
+        int handshake_done = 0;
+        struct rte_mbuf *bufs[BURST_SIZE];
+        for (int retries = 0; retries < 5 && !handshake_done; retries++) {
             uint16_t nb_rx = rte_eth_rx_burst(port_id, 0, bufs, BURST_SIZE);
             for (int i = 0; i < nb_rx; i++) {
                 struct rte_ether_hdr *eth = rte_pktmbuf_mtod(bufs[i], struct rte_ether_hdr *);
-                if (eth->ether_type != rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4)) { rte_pktmbuf_free(bufs[i]); continue; }
+                if (eth->ether_type != rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4)) continue;
                 struct rte_ipv4_hdr *ip = (struct rte_ipv4_hdr *)(eth + 1);
-                if (ip->next_proto_id != IPPROTO_TCP) { rte_pktmbuf_free(bufs[i]); continue; }
+                if (ip->next_proto_id != IPPROTO_TCP) continue;
                 struct rte_tcp_hdr *tcp = (struct rte_tcp_hdr *)(ip + 1);
 
                 if ((tcp->tcp_flags & (RTE_TCP_SYN_FLAG | RTE_TCP_ACK_FLAG)) == (RTE_TCP_SYN_FLAG | RTE_TCP_ACK_FLAG)) {
+                    printf("TX: Got SYN-ACK\n");
                     rx_ack = rte_be_to_cpu_32(tcp->sent_seq) + 1;
-                    printf("TX: Got SYN-ACK with seq %u, sending ACK...\n", rte_be_to_cpu_32(tcp->sent_seq));
 
+                    // Step 3: Send ACK
                     struct rte_mbuf *ack_pkt = rte_pktmbuf_alloc(mbuf_pool);
-                    if (!ack_pkt) continue;
-
-                    char *pkt_data = rte_pktmbuf_append(ack_pkt, sizeof(struct rte_ether_hdr) + sizeof(struct rte_ipv4_hdr) + sizeof(struct rte_tcp_hdr));
-                    struct rte_ether_hdr *eth2 = (struct rte_ether_hdr *)pkt_data;
+                    char *ack_data = rte_pktmbuf_append(ack_pkt, pkt_size);
+                    struct rte_ether_hdr *eth2 = (struct rte_ether_hdr *)ack_data;
                     struct rte_ipv4_hdr *ip2 = (struct rte_ipv4_hdr *)(eth2 + 1);
                     struct rte_tcp_hdr *tcp2 = (struct rte_tcp_hdr *)(ip2 + 1);
 
@@ -122,18 +116,57 @@ void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
                     tcp2->cksum = 0;
 
                     rte_eth_tx_burst(port_id, 0, &ack_pkt, 1);
-                    printf("TX: Sent ACK to complete handshake\n");
-                    state = 2;
+                    printf("TX: Sent ACK\n");
+                    handshake_done = 1;
                 }
                 rte_pktmbuf_free(bufs[i]);
             }
         }
 
-        if (state == 2) {
-            sleep(2);
+        // Step 4: Send Payload if handshake completed
+        if (handshake_done) {
+            struct rte_mbuf *pkt = rte_pktmbuf_alloc(mbuf_pool);
+            const char *msg = "Hello from TX";
+            size_t msg_len = strlen(msg);
+            size_t total_len = pkt_size + msg_len;
+            char *payload = rte_pktmbuf_append(pkt, total_len);
+
+            struct rte_ether_hdr *eth = (struct rte_ether_hdr *)payload;
+            struct rte_ipv4_hdr *ip = (struct rte_ipv4_hdr *)(eth + 1);
+            struct rte_tcp_hdr *tcp = (struct rte_tcp_hdr *)(ip + 1);
+            char *data = (char *)(tcp + 1);
+
+            eth->src_addr = (struct rte_ether_addr){{0x00,0x11,0x22,0x33,0x44,0x55}};
+            eth->dst_addr = (struct rte_ether_addr){{0x52,0x54,0x00,0xa2,0x6c,0xb6}};
+            eth->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
+
+            ip->version_ihl = 0x45;
+            ip->total_length = rte_cpu_to_be_16(sizeof(struct rte_ipv4_hdr) + sizeof(struct rte_tcp_hdr) + msg_len);
+            ip->time_to_live = 64;
+            ip->next_proto_id = IPPROTO_TCP;
+            ip->src_addr = rte_cpu_to_be_32(IPv4(10,0,0,1));
+            ip->dst_addr = rte_cpu_to_be_32(IPv4(10,0,0,2));
+            ip->hdr_checksum = 0;
+            ip->hdr_checksum = checksum(ip, sizeof(struct rte_ipv4_hdr));
+
+            tcp->src_port = rte_cpu_to_be_16(TCP_SRC_PORT);
+            tcp->dst_port = rte_cpu_to_be_16(TCP_DST_PORT);
+            tcp->sent_seq = rte_cpu_to_be_32(tx_seq + 1);
+            tcp->recv_ack = rte_cpu_to_be_32(rx_ack);
+            tcp->data_off = (sizeof(struct rte_tcp_hdr) / 4) << 4;
+            tcp->tcp_flags = RTE_TCP_ACK_FLAG | RTE_TCP_PSH_FLAG;
+            tcp->rx_win = rte_cpu_to_be_16(65535);
+            tcp->cksum = 0;
+
+            memcpy(data, msg, msg_len);
+            rte_eth_tx_burst(port_id, 0, &pkt, 1);
+            printf("TX: Sent TCP payload\n");
         }
+
+        sleep(1); // repeat
     }
 }
+
 
 void tcp_rx_loop(uint16_t port_id) {
     struct rte_mbuf *bufs[BURST_SIZE];
@@ -183,8 +216,14 @@ void tcp_rx_loop(uint16_t port_id) {
                 rte_eth_tx_burst(port_id, 0, &syn_ack, 1);
                 printf("RX: Sent SYN-ACK\n");
             }
-            else if ((tcp->tcp_flags & (RTE_TCP_SYN_FLAG | RTE_TCP_ACK_FLAG)) == RTE_TCP_ACK_FLAG) {
+            else if ((tcp->tcp_flags & RTE_TCP_ACK_FLAG) && !(tcp->tcp_flags & RTE_TCP_PSH_FLAG)) {
                 printf("RX: Got final ACK — handshake complete\n");
+
+            } else if (tcp->tcp_flags & RTE_TCP_PSH_FLAG) {
+                char *payload = (char *)(tcp + 1);
+                int payload_len = rte_be_to_cpu_16(ip->total_length) - sizeof(struct rte_ipv4_hdr) - sizeof(struct rte_tcp_hdr);
+                printf("RX: Got TCP payload (%d bytes): %.*s\n", payload_len, payload_len, payload);
+                printf("################\n");
             }
             rte_pktmbuf_free(bufs[i]);
         }

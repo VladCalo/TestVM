@@ -7,6 +7,9 @@ test interfaces are bridge and type virtio
 #### DPDK pmd test start:
 - sudo dpdk-testpmd -l 0-1 -n 4 -a 0000:02:00.0 -- -i --port-topology=paired
 
+#### DPDK bind:
+- /usr/local/bin/dpdk-devbind.py --bind=uio_pci_generic 0000:02:00.0
+
 #### DPDK App start:
 
 ##### 1. ICMP
@@ -21,5 +24,9 @@ test interfaces are bridge and type virtio
 - TX: sudo ./traffic_engine tx -l 0 -n 4 -a 0000:02:00.0
 - KVM: sudo tcpdump -i br-test -nn -e ether proto 0x080
 
+##### 3. UDP
+- RX: sudo ./traffic_engine rx udp -l 0 -n 4 -a 0000:02:00.0
+- TX: sudo ./traffic_engine tx udp -l 0 -n 4 -a 0000:02:00.0
+- KVM: sudo tcpdump -i br-test udp -n -e
 
 

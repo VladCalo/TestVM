@@ -6,6 +6,7 @@ test interfaces are bridge and type virtio
 
 #### Next-steps:
 in provisioning create service that binds to dpdk at everyboot and sets ips, writes mac addresses on disk and then the C code reads them from there
+for dns pass the domain as args
 go cli on kvm
 
 #### DPDK pmd test start:

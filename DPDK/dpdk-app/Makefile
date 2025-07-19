@@ -8,7 +8,8 @@ SRCS = src/main/traffic_engine.c \
        src/protocols/eth.c \
        src/protocols/icmp.c \
        src/protocols/udp.c \
-       src/protocols/tcp.c
+       src/protocols/tcp.c \
+       src/protocols/arp.c
 
 INCLUDES = -Iinclude
 

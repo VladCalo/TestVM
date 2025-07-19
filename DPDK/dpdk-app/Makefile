@@ -5,11 +5,13 @@ SRCS = src/main/traffic_engine.c \
        src/core/common.c \
        src/core/log.c \
        src/core/packet_utils.c \
+       src/core/traffic_modes.c \
        src/protocols/eth.c \
        src/protocols/icmp.c \
        src/protocols/udp.c \
        src/protocols/tcp.c \
-       src/protocols/arp.c
+       src/protocols/arp.c \
+       src/protocols/dns.c
 
 INCLUDES = -Iinclude
 

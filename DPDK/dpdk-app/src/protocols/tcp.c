@@ -2,6 +2,7 @@
 #include "../../include/core/common.h"
 #include "../../include/core/config.h"
 #include "../../include/core/log.h"
+#include "../../include/core/traffic_modes.h"
 #include <rte_mbuf.h>
 #include <rte_ether.h>
 #include <rte_ip.h>
@@ -11,7 +12,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
+void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool, traffic_config_t *traffic_config) {
     const struct rte_ether_addr src = {SRC_MAC};
     const struct rte_ether_addr dst = {DST_MAC};
     
@@ -43,7 +44,7 @@ void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
         tcp->cksum = 0;
 
         rte_eth_tx_burst(port_id, 0, &syn_pkt, 1);
-        LOG_INFO("TX: Sent TCP SYN");
+        LOG_INFO("TCP: Sent SYN");
 
         usleep(100000);
 
@@ -60,7 +61,7 @@ void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
                 struct rte_tcp_hdr *tcp = (struct rte_tcp_hdr *)(ip + 1);
 
                 if ((tcp->tcp_flags & (RTE_TCP_SYN_FLAG | RTE_TCP_ACK_FLAG)) == (RTE_TCP_SYN_FLAG | RTE_TCP_ACK_FLAG)) {
-                    LOG_INFO("TX: Received TCP SYN-ACK");
+                    LOG_INFO("TCP: Received SYN-ACK");
                     rx_ack = rte_be_to_cpu_32(tcp->sent_seq) + 1;
 
                     // Step 3: Send ACK
@@ -93,7 +94,7 @@ void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
                     tcp2->cksum = 0;
 
                     rte_eth_tx_burst(port_id, 0, &ack_pkt, 1);
-                    LOG_INFO("TX: Sent TCP ACK");
+                    LOG_INFO("TCP: Sent ACK");
                     handshake_done = 1;
                 }
                 rte_pktmbuf_free(bufs[i]);
@@ -137,10 +138,10 @@ void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
 
             memcpy(data, msg, msg_len);
             rte_eth_tx_burst(port_id, 0, &pkt, 1);
-            LOG_INFO("TX: Sent TCP payload: %s", msg);
+            LOG_INFO("TCP: Sent payload: %s", msg);
         }
 
-        sleep(1); // repeat
+        apply_traffic_delay(traffic_config); // repeat
     }
 }
 

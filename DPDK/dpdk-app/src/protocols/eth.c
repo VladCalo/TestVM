@@ -1,6 +1,6 @@
-#include "../include/eth.h"
-#include "../include/common.h"
-#include "../include/log.h"
+#include "../../include/protocols/eth.h"
+#include "../../include/core/common.h"
+#include "../../include/core/log.h"
 #include <rte_eal.h>
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>

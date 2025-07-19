@@ -1,10 +1,10 @@
 // traffic_engine.c
-#include "include/eth.h"
-#include "include/icmp.h"
-#include "include/udp.h"
-#include "include/tcp.h"
-#include "include/config.h"
-#include "include/log.h"
+#include "../include/protocols/eth.h"
+#include "../include/protocols/icmp.h"
+#include "../include/protocols/udp.h"
+#include "../include/protocols/tcp.h"
+#include "../include/core/config.h"
+#include "../include/core/log.h"
 #include <stdio.h>
 #include <string.h>
 

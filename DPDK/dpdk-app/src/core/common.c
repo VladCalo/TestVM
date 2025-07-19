@@ -1,4 +1,4 @@
-#include "../include/common.h"
+#include "../../include/core/common.h"
 #include <rte_byteorder.h>
 #include <stdio.h>
 #include <string.h>

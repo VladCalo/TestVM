@@ -1,4 +1,4 @@
-#include "../include/config.h"
+#include "../../include/core/config.h"
 #include <rte_byteorder.h>
 
 // Global configuration instance with hardcoded values

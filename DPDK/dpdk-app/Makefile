@@ -1,6 +1,15 @@
 APP = traffic_engine
 
-SRCS = traffic_engine.c src/config.c src/common.c src/log.c src/packet_utils.c src/eth.c src/icmp.c src/udp.c src/tcp.c
+SRCS = src/main/traffic_engine.c \
+       src/core/config.c \
+       src/core/common.c \
+       src/core/log.c \
+       src/core/packet_utils.c \
+       src/protocols/eth.c \
+       src/protocols/icmp.c \
+       src/protocols/udp.c \
+       src/protocols/tcp.c
+
 INCLUDES = -Iinclude
 
 PKGCONF = pkg-config

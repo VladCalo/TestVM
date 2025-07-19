@@ -1,6 +1,6 @@
-#include "../include/udp.h"
-#include "../include/common.h"
-#include "../include/log.h"
+#include "../../include/protocols/udp.h"
+#include "../../include/core/common.h"
+#include "../../include/core/log.h"
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>
 #include <rte_ether.h>

@@ -1,5 +1,5 @@
-#include "../include/packet_utils.h"
-#include "../include/common.h"
+#include "../../include/core/packet_utils.h"
+#include "../../include/core/common.h"
 #include <rte_ethdev.h>
 #include <stdio.h>
 

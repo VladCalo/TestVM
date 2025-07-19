@@ -23,7 +23,8 @@ enum protocol_type {
     PROTO_ETH,
     PROTO_ICMP,
     PROTO_UDP,
-    PROTO_TCP
+    PROTO_TCP,
+    PROTO_ARP
 };
 
 // Common packet structure

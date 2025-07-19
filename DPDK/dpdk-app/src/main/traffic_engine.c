@@ -3,6 +3,7 @@
 #include "../include/protocols/icmp.h"
 #include "../include/protocols/udp.h"
 #include "../include/protocols/tcp.h"
+#include "../include/protocols/arp.h"
 #include "../include/core/common.h"
 #include "../include/core/config.h"
 #include "../include/core/log.h"
@@ -23,6 +24,7 @@ int main(int argc, char *argv[]) {
         if (strcmp(argv[2], "icmp") == 0) proto = PROTO_ICMP;
         else if (strcmp(argv[2], "udp") == 0) proto = PROTO_UDP;
         else if (strcmp(argv[2], "tcp") == 0) proto = PROTO_TCP;
+        else if (strcmp(argv[2], "arp") == 0) proto = PROTO_ARP;
         else if (strcmp(argv[2], "eth") == 0) proto = PROTO_ETH;
     }
 
@@ -43,7 +45,8 @@ int main(int argc, char *argv[]) {
              is_tx ? "TX" : "RX", 
              proto == PROTO_ICMP ? "ICMP" : 
              proto == PROTO_UDP ? "UDP" : 
-             proto == PROTO_TCP ? "TCP" : "ETH");
+             proto == PROTO_TCP ? "TCP" : 
+             proto == PROTO_ARP ? "ARP" : "ETH");
 
     if (proto == PROTO_ICMP) {
         if (is_tx)
@@ -60,6 +63,11 @@ int main(int argc, char *argv[]) {
             tcp_tx_loop(port_id, mbuf_pool);
         else
             tcp_rx_loop(port_id);
+    } else if (proto == PROTO_ARP) {
+        if (is_tx)
+            arp_tx_loop(port_id, mbuf_pool);
+        else
+            arp_rx_loop(port_id);
     } else {
         if (is_tx)
             eth_tx_loop(port_id, mbuf_pool);

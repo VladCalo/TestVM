@@ -1,5 +1,6 @@
 #include "../../include/protocols/udp.h"
 #include "../../include/core/common.h"
+#include "../../include/core/config.h"
 #include "../../include/core/log.h"
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>
@@ -10,8 +11,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define UDP_SRC_PORT 12345
-#define UDP_DST_PORT 23456
+
 
 void udp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
     const struct rte_ether_addr src = {SRC_MAC};
@@ -39,8 +39,8 @@ void udp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
                          sizeof(struct rte_udp_hdr) + payload_len);
 
         struct rte_udp_hdr *udp_hdr = (struct rte_udp_hdr *)(ip_hdr + 1);
-        udp_hdr->src_port = rte_cpu_to_be_16(UDP_SRC_PORT);
-        udp_hdr->dst_port = rte_cpu_to_be_16(UDP_DST_PORT);
+        udp_hdr->src_port = rte_cpu_to_be_16(g_config.udp_src_port);
+        udp_hdr->dst_port = rte_cpu_to_be_16(g_config.udp_dst_port);
         udp_hdr->dgram_len = rte_cpu_to_be_16(sizeof(struct rte_udp_hdr) + payload_len);
         udp_hdr->dgram_cksum = 0;
 

@@ -1,5 +1,6 @@
 #include "../../include/protocols/icmp.h"
 #include "../../include/core/common.h"
+#include "../../include/core/config.h"
 #include "../../include/core/log.h"
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>

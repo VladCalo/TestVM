@@ -3,8 +3,10 @@
 #include "../include/protocols/icmp.h"
 #include "../include/protocols/udp.h"
 #include "../include/protocols/tcp.h"
+#include "../include/core/common.h"
 #include "../include/core/config.h"
 #include "../include/core/log.h"
+#include <rte_eal.h>
 #include <stdio.h>
 #include <string.h>
 

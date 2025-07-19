@@ -1,4 +1,7 @@
-#include "../include/tcp.h"
+#include "../../include/protocols/tcp.h"
+#include "../../include/core/common.h"
+#include "../../include/core/config.h"
+#include "../../include/core/log.h"
 #include <rte_mbuf.h>
 #include <rte_ether.h>
 #include <rte_ip.h>
@@ -8,56 +11,32 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#define BURST_SIZE 32
-#define IPv4(a,b,c,d) ((uint32_t)(((a&0xff)<<24)|((b&0xff)<<16)|((c&0xff)<<8)|(d&0xff)))
-
-#define TCP_SRC_PORT 11111
-#define TCP_DST_PORT 22222
-
-static uint16_t checksum(const void *data, size_t len) {
-    const uint16_t *buf = data;
-    uint32_t sum = 0;
-    while (len > 1) {
-        sum += *buf++;
-        len -= 2;
-    }
-    if (len == 1)
-        sum += *((uint8_t *)buf);
-    sum = (sum >> 16) + (sum & 0xffff);
-    sum += (sum >> 16);
-    return ~sum;
-}
-
 void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
+    const struct rte_ether_addr src = {SRC_MAC};
+    const struct rte_ether_addr dst = {DST_MAC};
+    
     while (1) {
         uint32_t tx_seq = 1000;
         uint32_t rx_ack = 0;
 
         // Step 1: Send SYN
-        struct rte_mbuf *syn_pkt = rte_pktmbuf_alloc(mbuf_pool);
+        size_t pkt_size = sizeof(struct rte_ether_hdr) + sizeof(struct rte_ipv4_hdr) + sizeof(struct rte_tcp_hdr);
+        struct rte_mbuf *syn_pkt = allocate_packet(mbuf_pool, pkt_size);
         if (!syn_pkt) continue;
 
-        size_t pkt_size = sizeof(struct rte_ether_hdr) + sizeof(struct rte_ipv4_hdr) + sizeof(struct rte_tcp_hdr);
-        char *data = rte_pktmbuf_append(syn_pkt, pkt_size);
+        char *data = rte_pktmbuf_mtod(syn_pkt, char *);
         struct rte_ether_hdr *eth = (struct rte_ether_hdr *)data;
         struct rte_ipv4_hdr *ip = (struct rte_ipv4_hdr *)(eth + 1);
         struct rte_tcp_hdr *tcp = (struct rte_tcp_hdr *)(ip + 1);
 
-        eth->src_addr = (struct rte_ether_addr){{0x00,0x11,0x22,0x33,0x44,0x55}};
-        eth->dst_addr = (struct rte_ether_addr){{0x52,0x54,0x00,0xa2,0x6c,0xb6}};
-        eth->ether_type = rte_cpu_to_be_16(RTE_ETHER_TYPE_IPV4);
+        // Setup Ethernet header
+        setup_ethernet_header(eth, &src, &dst, RTE_ETHER_TYPE_IPV4);
 
-        ip->version_ihl = 0x45;
-        ip->total_length = rte_cpu_to_be_16(sizeof(struct rte_ipv4_hdr) + sizeof(struct rte_tcp_hdr));
-        ip->time_to_live = 64;
-        ip->next_proto_id = IPPROTO_TCP;
-        ip->src_addr = rte_cpu_to_be_32(IPv4(10,0,0,1));
-        ip->dst_addr = rte_cpu_to_be_32(IPv4(10,0,0,2));
-        ip->hdr_checksum = 0;
-        ip->hdr_checksum = checksum(ip, sizeof(struct rte_ipv4_hdr));
+        // Setup IP header
+        setup_ipv4_header(ip, SRC_IP, DST_IP, IPPROTO_TCP, sizeof(struct rte_tcp_hdr));
 
-        tcp->src_port = rte_cpu_to_be_16(TCP_SRC_PORT);
-        tcp->dst_port = rte_cpu_to_be_16(TCP_DST_PORT);
+        tcp->src_port = rte_cpu_to_be_16(g_config.tcp_src_port);
+        tcp->dst_port = rte_cpu_to_be_16(g_config.tcp_dst_port);
         tcp->sent_seq = rte_cpu_to_be_32(tx_seq);
         tcp->recv_ack = 0;
         tcp->data_off = (sizeof(struct rte_tcp_hdr) / 4) << 4;
@@ -66,7 +45,7 @@ void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
         tcp->cksum = 0;
 
         rte_eth_tx_burst(port_id, 0, &syn_pkt, 1);
-        printf("TX: Sent SYN\n");
+        LOG_INFO("TX: Sent TCP SYN");
 
         usleep(100000);
 
@@ -83,7 +62,7 @@ void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
                 struct rte_tcp_hdr *tcp = (struct rte_tcp_hdr *)(ip + 1);
 
                 if ((tcp->tcp_flags & (RTE_TCP_SYN_FLAG | RTE_TCP_ACK_FLAG)) == (RTE_TCP_SYN_FLAG | RTE_TCP_ACK_FLAG)) {
-                    printf("TX: Got SYN-ACK\n");
+                    LOG_INFO("TX: Received TCP SYN-ACK");
                     rx_ack = rte_be_to_cpu_32(tcp->sent_seq) + 1;
 
                     // Step 3: Send ACK
@@ -104,7 +83,7 @@ void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
                     ip2->src_addr = ip->dst_addr;
                     ip2->dst_addr = ip->src_addr;
                     ip2->hdr_checksum = 0;
-                    ip2->hdr_checksum = checksum(ip2, sizeof(struct rte_ipv4_hdr));
+                    ip2->hdr_checksum = calculate_checksum(ip2, sizeof(struct rte_ipv4_hdr));
 
                     tcp2->src_port = tcp->dst_port;
                     tcp2->dst_port = tcp->src_port;
@@ -116,7 +95,7 @@ void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
                     tcp2->cksum = 0;
 
                     rte_eth_tx_burst(port_id, 0, &ack_pkt, 1);
-                    printf("TX: Sent ACK\n");
+                    LOG_INFO("TX: Sent TCP ACK");
                     handshake_done = 1;
                 }
                 rte_pktmbuf_free(bufs[i]);
@@ -144,13 +123,13 @@ void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
             ip->total_length = rte_cpu_to_be_16(sizeof(struct rte_ipv4_hdr) + sizeof(struct rte_tcp_hdr) + msg_len);
             ip->time_to_live = 64;
             ip->next_proto_id = IPPROTO_TCP;
-            ip->src_addr = rte_cpu_to_be_32(IPv4(10,0,0,1));
-            ip->dst_addr = rte_cpu_to_be_32(IPv4(10,0,0,2));
+            ip->src_addr = rte_cpu_to_be_32(SRC_IP);
+            ip->dst_addr = rte_cpu_to_be_32(DST_IP);
             ip->hdr_checksum = 0;
-            ip->hdr_checksum = checksum(ip, sizeof(struct rte_ipv4_hdr));
+            ip->hdr_checksum = calculate_checksum(ip, sizeof(struct rte_ipv4_hdr));
 
-            tcp->src_port = rte_cpu_to_be_16(TCP_SRC_PORT);
-            tcp->dst_port = rte_cpu_to_be_16(TCP_DST_PORT);
+            tcp->src_port = rte_cpu_to_be_16(g_config.tcp_src_port);
+            tcp->dst_port = rte_cpu_to_be_16(g_config.tcp_dst_port);
             tcp->sent_seq = rte_cpu_to_be_32(tx_seq + 1);
             tcp->recv_ack = rte_cpu_to_be_32(rx_ack);
             tcp->data_off = (sizeof(struct rte_tcp_hdr) / 4) << 4;
@@ -160,7 +139,7 @@ void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
 
             memcpy(data, msg, msg_len);
             rte_eth_tx_burst(port_id, 0, &pkt, 1);
-            printf("TX: Sent TCP payload\n");
+            LOG_INFO("TX: Sent TCP payload: %s", msg);
         }
 
         sleep(1); // repeat
@@ -181,7 +160,7 @@ void tcp_rx_loop(uint16_t port_id) {
             struct rte_tcp_hdr *tcp = (struct rte_tcp_hdr *)(ip + 1);
 
             if ((tcp->tcp_flags & RTE_TCP_SYN_FLAG) && !(tcp->tcp_flags & RTE_TCP_ACK_FLAG)) {
-                printf("RX: Got SYN from TX, sending SYN-ACK...\n");
+                LOG_INFO("RX: Received TCP SYN, sending SYN-ACK");
 
                 struct rte_mbuf *syn_ack = rte_pktmbuf_alloc(bufs[i]->pool);
                 if (!syn_ack) { rte_pktmbuf_free(bufs[i]); continue; }
@@ -202,7 +181,7 @@ void tcp_rx_loop(uint16_t port_id) {
                 ip2->src_addr = ip->dst_addr;
                 ip2->dst_addr = ip->src_addr;
                 ip2->hdr_checksum = 0;
-                ip2->hdr_checksum = checksum(ip2, sizeof(struct rte_ipv4_hdr));
+                ip2->hdr_checksum = calculate_checksum(ip2, sizeof(struct rte_ipv4_hdr));
 
                 tcp2->src_port = tcp->dst_port;
                 tcp2->dst_port = tcp->src_port;
@@ -214,16 +193,15 @@ void tcp_rx_loop(uint16_t port_id) {
                 tcp2->cksum = 0;
 
                 rte_eth_tx_burst(port_id, 0, &syn_ack, 1);
-                printf("RX: Sent SYN-ACK\n");
+                LOG_INFO("RX: Sent TCP SYN-ACK");
             }
             else if ((tcp->tcp_flags & RTE_TCP_ACK_FLAG) && !(tcp->tcp_flags & RTE_TCP_PSH_FLAG)) {
-                printf("RX: Got final ACK — handshake complete\n");
+                LOG_INFO("RX: Received final TCP ACK — handshake complete");
 
             } else if (tcp->tcp_flags & RTE_TCP_PSH_FLAG) {
                 char *payload = (char *)(tcp + 1);
                 int payload_len = rte_be_to_cpu_16(ip->total_length) - sizeof(struct rte_ipv4_hdr) - sizeof(struct rte_tcp_hdr);
-                printf("RX: Got TCP payload (%d bytes): %.*s\n", payload_len, payload_len, payload);
-                printf("################\n");
+                LOG_INFO("RX: Received TCP payload (%d bytes): %.*s", payload_len, payload_len, payload);
             }
             rte_pktmbuf_free(bufs[i]);
         }

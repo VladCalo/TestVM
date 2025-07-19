@@ -1,4 +1,7 @@
-#include "../include/eth.h"
+#include "../../include/protocols/eth.h"
+#include "../../include/core/common.h"
+#include "../../include/core/config.h"
+#include "../../include/core/log.h"
 #include <rte_eal.h>
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>
@@ -6,10 +9,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-
-#define NUM_MBUFS 8191
-#define MBUF_CACHE_SIZE 250
-#define BURST_SIZE 32
 
 static const struct rte_eth_conf port_conf_default = {0};
 
@@ -37,34 +36,34 @@ struct rte_mempool* eth_init(uint16_t port_id) {
     if (rte_eth_dev_start(port_id) < 0)
         rte_exit(EXIT_FAILURE, "Failed to start device\n");
 
-    printf("Started DPDK on port %u\n", port_id);
+    LOG_INFO("Started DPDK on port %u", port_id);
     return mbuf_pool;
 }
 
 void eth_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
+    const struct rte_ether_addr src = {SRC_MAC};
+    const struct rte_ether_addr dst = {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}}; // Broadcast
+    
     while (1) {
-        struct rte_mbuf *mbuf = rte_pktmbuf_alloc(mbuf_pool);
+        struct rte_mbuf *mbuf = allocate_packet(mbuf_pool, 64);
         if (!mbuf) continue;
 
-        char *data = rte_pktmbuf_append(mbuf, 64);
-        if (!data) {
-            rte_pktmbuf_free(mbuf);
-            continue;
-        }
+        char *data = rte_pktmbuf_mtod(mbuf, char *);
 
+        // Setup Ethernet header
         struct rte_ether_hdr *eth_hdr = (struct rte_ether_hdr *)data;
-        struct rte_ether_addr src = {{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}};
-        struct rte_ether_addr dst = {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
-
-        eth_hdr->src_addr = src;
-        eth_hdr->dst_addr = dst;
-        eth_hdr->ether_type = rte_cpu_to_be_16(0x0800);
+        setup_ethernet_header(eth_hdr, &src, &dst, 0x0800);
 
         char *payload = (char *)(eth_hdr + 1);
         snprintf(payload, 64 - sizeof(struct rte_ether_hdr), "Hello from TX VM");
 
         const uint16_t nb_tx = rte_eth_tx_burst(port_id, 0, &mbuf, 1);
-        if (nb_tx < 1) rte_pktmbuf_free(mbuf);
+        if (nb_tx < 1) {
+            rte_pktmbuf_free(mbuf);
+            LOG_WARN("TX: Failed to send ETH frame");
+        } else {
+            LOG_INFO("TX: Sent ETH frame with payload: %s", payload);
+        }
 
         sleep(1);
     }
@@ -77,7 +76,7 @@ void eth_rx_loop(uint16_t port_id) {
         uint16_t nb_rx = rte_eth_rx_burst(port_id, 0, bufs, BURST_SIZE);
         for (int i = 0; i < nb_rx; i++) {
             char *payload = rte_pktmbuf_mtod_offset(bufs[i], char *, sizeof(struct rte_ether_hdr));
-            printf("Received: %s\n", payload);
+            LOG_INFO("RX: Received ETH frame: %s", payload);
             rte_pktmbuf_free(bufs[i]);
         }
     }

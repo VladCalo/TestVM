@@ -1,8 +1,12 @@
 // traffic_engine.c
-#include "include/eth.h"
-#include "include/icmp.h"
-#include "include/udp.h"
-#include "include/tcp.h"
+#include "../include/protocols/eth.h"
+#include "../include/protocols/icmp.h"
+#include "../include/protocols/udp.h"
+#include "../include/protocols/tcp.h"
+#include "../include/core/common.h"
+#include "../include/core/config.h"
+#include "../include/core/log.h"
+#include <rte_eal.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -29,8 +33,17 @@ int main(int argc, char *argv[]) {
     argc -= ret;
     argv += ret;
 
+    // Initialize configuration
+    init_network_config();
+
     struct rte_mempool *mbuf_pool = eth_init(port_id);
     if (!mbuf_pool) return 1;
+
+    LOG_INFO("Traffic Engine started - Mode: %s, Protocol: %s", 
+             is_tx ? "TX" : "RX", 
+             proto == PROTO_ICMP ? "ICMP" : 
+             proto == PROTO_UDP ? "UDP" : 
+             proto == PROTO_TCP ? "TCP" : "ETH");
 
     if (proto == PROTO_ICMP) {
         if (is_tx)

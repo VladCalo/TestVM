@@ -4,7 +4,6 @@
 #include <rte_ether.h>
 #include <stdint.h>
 
-// Network configuration (hardcoded as requested)
 struct network_config {
     // MAC addresses
     struct rte_ether_addr src_mac;
@@ -29,13 +28,10 @@ struct network_config {
     uint32_t rx_timeout_ms;
 };
 
-// Global configuration instance
 extern const struct network_config g_config;
 
-// Configuration initialization
 void init_network_config(void);
 
-// Helper macros for easy access
 #define CONFIG_SRC_MAC g_config.src_mac
 #define CONFIG_DST_MAC g_config.dst_mac
 #define CONFIG_SRC_IP g_config.src_ip

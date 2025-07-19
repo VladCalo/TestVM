@@ -29,11 +29,9 @@ void udp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
 
         char *pkt_data = rte_pktmbuf_mtod(mbuf, char *);
 
-        // Setup Ethernet header
         struct rte_ether_hdr *eth_hdr = (struct rte_ether_hdr *)pkt_data;
         setup_ethernet_header(eth_hdr, &src, &dst, RTE_ETHER_TYPE_IPV4);
 
-        // Setup IP header
         struct rte_ipv4_hdr *ip_hdr = (struct rte_ipv4_hdr *)(eth_hdr + 1);
         setup_ipv4_header(ip_hdr, SRC_IP, DST_IP, IPPROTO_UDP, 
                          sizeof(struct rte_udp_hdr) + payload_len);

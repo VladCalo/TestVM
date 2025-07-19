@@ -29,10 +29,8 @@ void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
         struct rte_ipv4_hdr *ip = (struct rte_ipv4_hdr *)(eth + 1);
         struct rte_tcp_hdr *tcp = (struct rte_tcp_hdr *)(ip + 1);
 
-        // Setup Ethernet header
         setup_ethernet_header(eth, &src, &dst, RTE_ETHER_TYPE_IPV4);
 
-        // Setup IP header
         setup_ipv4_header(ip, SRC_IP, DST_IP, IPPROTO_TCP, sizeof(struct rte_tcp_hdr));
 
         tcp->src_port = rte_cpu_to_be_16(g_config.tcp_src_port);

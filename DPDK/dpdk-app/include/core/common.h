@@ -24,7 +24,15 @@ enum protocol_type {
     PROTO_ICMP,
     PROTO_UDP,
     PROTO_TCP,
-    PROTO_ARP
+    PROTO_ARP,
+    PROTO_DNS
+};
+
+enum traffic_mode {
+    TRAFFIC_CONTINUOUS,
+    TRAFFIC_BURST,
+    TRAFFIC_RATE_LIMITED,
+    TRAFFIC_EXPONENTIAL_BACKOFF
 };
 
 // Common packet structure

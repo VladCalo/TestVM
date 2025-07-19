@@ -2,6 +2,7 @@
 #include "../../include/core/common.h"
 #include "../../include/core/config.h"
 #include "../../include/core/log.h"
+#include "../../include/core/traffic_modes.h"
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>
 #include <rte_ether.h>
@@ -11,7 +12,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-void arp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
+void arp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool, traffic_config_t *traffic_config) {
     const struct rte_ether_addr src = {SRC_MAC};
     const struct rte_ether_addr dst = {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
     
@@ -39,7 +40,7 @@ void arp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
         arp_hdr->arp_data.arp_tip = rte_cpu_to_be_32(DST_IP);
 
         rte_eth_tx_burst(port_id, 0, &mbuf, 1);
-        LOG_INFO("TX: Sent ARP Request for %d.%d.%d.%d", 
+        LOG_INFO("ARP: Sent request for %d.%d.%d.%d", 
                 (DST_IP >> 24) & 0xFF, (DST_IP >> 16) & 0xFF,
                 (DST_IP >> 8) & 0xFF, DST_IP & 0xFF);
         
@@ -57,7 +58,7 @@ void arp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
             struct rte_arp_hdr *arp = (struct rte_arp_hdr *)(eth + 1);
             if (rte_be_to_cpu_16(arp->arp_opcode) == RTE_ARP_OP_REPLY) {
                 uint32_t sender_ip = rte_be_to_cpu_32(arp->arp_data.arp_sip);
-                LOG_INFO("TX: Received ARP Reply from %d.%d.%d.%d", 
+                LOG_INFO("ARP: Received reply from %d.%d.%d.%d", 
                         (sender_ip >> 24) & 0xFF, (sender_ip >> 16) & 0xFF,
                         (sender_ip >> 8) & 0xFF, sender_ip & 0xFF);
             }
@@ -65,7 +66,7 @@ void arp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
             rte_pktmbuf_free(bufs[i]);
         }
 
-        sleep(1);
+        apply_traffic_delay(traffic_config);
     }
 }
 
@@ -88,8 +89,8 @@ void arp_rx_loop(uint16_t port_id) {
             uint32_t sender_ip = rte_be_to_cpu_32(arp_hdr->arp_data.arp_sip);
             uint32_t target_ip = rte_be_to_cpu_32(arp_hdr->arp_data.arp_tip);
 
-            LOG_INFO("RX: Received ARP %s from %d.%d.%d.%d", 
-                    opcode == RTE_ARP_OP_REQUEST ? "Request" : "Reply",
+            LOG_INFO("ARP: Received %s from %d.%d.%d.%d", 
+                    opcode == RTE_ARP_OP_REQUEST ? "request" : "reply",
                     (sender_ip >> 24) & 0xFF, (sender_ip >> 16) & 0xFF,
                     (sender_ip >> 8) & 0xFF, sender_ip & 0xFF);
 
@@ -125,7 +126,7 @@ void arp_rx_loop(uint16_t port_id) {
                 tx_arp->arp_data.arp_sip = rte_cpu_to_be_32(DST_IP);
                 tx_arp->arp_data.arp_tip = rte_cpu_to_be_32(sender_ip);
 
-                LOG_INFO("RX: Sending ARP Reply to %d.%d.%d.%d", 
+                LOG_INFO("ARP: Sending reply to %d.%d.%d.%d", 
                         (sender_ip >> 24) & 0xFF, (sender_ip >> 16) & 0xFF,
                         (sender_ip >> 8) & 0xFF, sender_ip & 0xFF);
                 rte_eth_tx_burst(port_id, 0, &tx_pkt, 1);

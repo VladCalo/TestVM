@@ -2,6 +2,7 @@
 #include "../../include/core/common.h"
 #include "../../include/core/config.h"
 #include "../../include/core/log.h"
+#include "../../include/core/traffic_modes.h"
 #include <rte_eal.h>
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>
@@ -40,7 +41,7 @@ struct rte_mempool* eth_init(uint16_t port_id) {
     return mbuf_pool;
 }
 
-void eth_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
+void eth_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool, traffic_config_t *traffic_config) {
     const struct rte_ether_addr src = {SRC_MAC};
     const struct rte_ether_addr dst = {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}}; // Broadcast
     
@@ -60,12 +61,12 @@ void eth_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
         const uint16_t nb_tx = rte_eth_tx_burst(port_id, 0, &mbuf, 1);
         if (nb_tx < 1) {
             rte_pktmbuf_free(mbuf);
-            LOG_WARN("TX: Failed to send ETH frame");
+            LOG_WARN("ETH: Failed to send frame");
         } else {
-            LOG_INFO("TX: Sent ETH frame with payload: %s", payload);
+            LOG_INFO("ETH: Sent frame with payload: %s", payload);
         }
 
-        sleep(1);
+        apply_traffic_delay(traffic_config);
     }
 }
 
@@ -76,7 +77,7 @@ void eth_rx_loop(uint16_t port_id) {
         uint16_t nb_rx = rte_eth_rx_burst(port_id, 0, bufs, BURST_SIZE);
         for (int i = 0; i < nb_rx; i++) {
             char *payload = rte_pktmbuf_mtod_offset(bufs[i], char *, sizeof(struct rte_ether_hdr));
-            LOG_INFO("RX: Received ETH frame: %s", payload);
+            LOG_INFO("ETH: Received frame: %s", payload);
             rte_pktmbuf_free(bufs[i]);
         }
     }

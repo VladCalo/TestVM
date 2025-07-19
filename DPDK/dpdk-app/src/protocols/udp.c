@@ -2,6 +2,7 @@
 #include "../../include/core/common.h"
 #include "../../include/core/config.h"
 #include "../../include/core/log.h"
+#include "../../include/core/traffic_modes.h"
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>
 #include <rte_ether.h>
@@ -13,7 +14,7 @@
 
 
 
-void udp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
+void udp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool, traffic_config_t *traffic_config) {
     const struct rte_ether_addr src = {SRC_MAC};
     const struct rte_ether_addr dst = {DST_MAC};
     
@@ -46,8 +47,8 @@ void udp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool) {
         memcpy(payload, msg, payload_len);
 
         rte_eth_tx_burst(port_id, 0, &mbuf, 1);
-        LOG_INFO("TX: Sent UDP packet with payload: %s", msg);
-        sleep(1);
+        LOG_INFO("UDP: Sent packet with payload: %s", msg);
+        apply_traffic_delay(traffic_config);
     }
 }
 
@@ -74,7 +75,7 @@ void udp_rx_loop(uint16_t port_id) {
             struct rte_udp_hdr *udp_hdr = (struct rte_udp_hdr *)(ip_hdr + 1);
             char *payload = (char *)(udp_hdr + 1);
 
-            LOG_INFO("RX: Received UDP packet from %d.%d.%d.%d:%u, payload: %s",
+            LOG_INFO("UDP: Received packet from %d.%d.%d.%d:%u, payload: %s",
                     (rte_be_to_cpu_32(ip_hdr->src_addr) >> 24) & 0xFF,
                     (rte_be_to_cpu_32(ip_hdr->src_addr) >> 16) & 0xFF,
                     (rte_be_to_cpu_32(ip_hdr->src_addr) >> 8) & 0xFF,

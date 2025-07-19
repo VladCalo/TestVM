@@ -35,7 +35,7 @@ test interfaces are bridge and type virtio
 - RX: sudo ./traffic_engine rx tcp -l 0 -n 4 -a 0000:02:00.0
 - TX: sudo ./traffic_engine tx tcp -l 0 -n 4 -a 0000:02:00.0
 
-##### 4. ARP (Address Resolution Protocol)
+##### 4. ARP
 ###### Note: hardcoded IP addresses
 - RX: sudo ./traffic_engine rx arp -l 0 -n 4 -a 0000:02:00.0
 - TX: sudo ./traffic_engine tx arp -l 0 -n 4 -a 0000:02:00.0

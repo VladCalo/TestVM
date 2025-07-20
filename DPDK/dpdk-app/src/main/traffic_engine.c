@@ -18,8 +18,10 @@ int main(int argc, char *argv[]) {
     int is_tx = 0;
     enum protocol_type proto = PROTO_ETH;
     enum traffic_mode mode = TRAFFIC_CONTINUOUS;
+    const char *domain = "example.com";
+    const char *message = "Hello via UDP/TCP!";
 
-    // Parse CLI: ./traffic_engine [tx|rx] [protocol] [traffic_mode]
+    // Parse CLI: ./traffic_engine [tx|rx] [protocol] [traffic_mode] [domain/message]
     if (argc > 1 && strcmp(argv[1], "tx") == 0)
         is_tx = 1;
 
@@ -37,6 +39,19 @@ int main(int argc, char *argv[]) {
         else if (strcmp(argv[3], "burst") == 0) mode = TRAFFIC_BURST;
         else if (strcmp(argv[3], "rate-limited") == 0) mode = TRAFFIC_RATE_LIMITED;
         else if (strcmp(argv[3], "exponential-backoff") == 0) mode = TRAFFIC_EXPONENTIAL_BACKOFF;
+        else if (proto == PROTO_DNS) {
+            domain = argv[3];
+        } else if (proto == PROTO_UDP || proto == PROTO_TCP) {
+            message = argv[3];
+        }
+    }
+
+    if (argc > 4) {
+        if (proto == PROTO_DNS) {
+            domain = argv[4];
+        } else if (proto == PROTO_UDP || proto == PROTO_TCP) {
+            message = argv[4];
+        }
     }
 
     int ret = rte_eal_init(argc, argv);
@@ -82,12 +97,12 @@ int main(int argc, char *argv[]) {
             icmp_rx_loop(port_id);
     } else if (proto == PROTO_UDP) {
         if (is_tx)
-            udp_tx_loop(port_id, mbuf_pool, &traffic_config);
+            udp_tx_loop(port_id, mbuf_pool, &traffic_config, message);
         else
             udp_rx_loop(port_id);
     } else if (proto == PROTO_TCP) {
         if (is_tx)
-            tcp_tx_loop(port_id, mbuf_pool, &traffic_config);
+            tcp_tx_loop(port_id, mbuf_pool, &traffic_config, message);
         else
             tcp_rx_loop(port_id);
     } else if (proto == PROTO_ARP) {
@@ -97,7 +112,7 @@ int main(int argc, char *argv[]) {
             arp_rx_loop(port_id);
     } else if (proto == PROTO_DNS) {
         if (is_tx)
-            dns_tx_loop(port_id, mbuf_pool, &traffic_config);
+            dns_tx_loop(port_id, mbuf_pool, &traffic_config, domain);
         else
             dns_rx_loop(port_id);
     } else {

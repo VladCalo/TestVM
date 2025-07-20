@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool, traffic_config_t *traffic_config) {
+void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool, traffic_config_t *traffic_config, const char *message) {
     const struct rte_ether_addr src = {SRC_MAC};
     const struct rte_ether_addr dst = {DST_MAC};
     
@@ -104,8 +104,7 @@ void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool, traffic_config
         // Step 4: Send Payload if handshake completed
         if (handshake_done) {
             struct rte_mbuf *pkt = rte_pktmbuf_alloc(mbuf_pool);
-            const char *msg = "Hello from TX";
-            size_t msg_len = strlen(msg);
+            size_t msg_len = strlen(message);
             size_t total_len = pkt_size + msg_len;
             char *payload = rte_pktmbuf_append(pkt, total_len);
 
@@ -136,9 +135,9 @@ void tcp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool, traffic_config
             tcp->rx_win = rte_cpu_to_be_16(65535);
             tcp->cksum = 0;
 
-            memcpy(data, msg, msg_len);
+            memcpy(data, message, msg_len);
             rte_eth_tx_burst(port_id, 0, &pkt, 1);
-            LOG_INFO("TCP: Sent payload: %s", msg);
+            LOG_INFO("TCP: Sent payload: %s", message);
         }
 
         apply_traffic_delay(traffic_config); // repeat

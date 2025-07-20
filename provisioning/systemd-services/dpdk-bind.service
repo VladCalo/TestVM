@@ -1,0 +1,14 @@
+[Unit]
+Description=Bind DPDK interface and save MAC address
+After=network.target
+Before=dpdk-app.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/dpdk-bind.sh
+RemainAfterExit=true
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target 

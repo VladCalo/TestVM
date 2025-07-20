@@ -52,10 +52,23 @@ configure_HugePages() {
     systemctl enable hugepages.service
 }
 
+configure_DPDK_Bind() {
+    cp -f scripts/dpdk-bind.sh /usr/local/bin/
+    chmod +x /usr/local/bin/dpdk-bind.sh
+    
+    cp -f scripts/dpdk-manage.sh /usr/local/bin/dpdk-manage
+    chmod +x /usr/local/bin/dpdk-manage
+    
+    mv systemd-services/dpdk-bind.service /etc/systemd/system
+    systemctl daemon-reload
+    systemctl enable dpdk-bind.service
+}
+
 main() {
     install_packages
     install_DPDK
     configure_HugePages
+    configure_DPDK_Bind
     # make custom dpdk app and run it with: sudo ./dpdk_app -l 0-1 -n 4 --log-level=8
 
     reboot

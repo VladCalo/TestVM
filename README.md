@@ -33,10 +33,12 @@ go cli on kvm
 - TX: sudo ./traffic_engine tx icmp [traffic_mode] -l 0 -n 4 -a 0000:02:00.0
 - KVM: sudo tcpdump -i br-test -n -e ip proto 1
 
-##### 2. ETH Frames
-- RX: sudo ./traffic_engine rx -l 0 -n 4 -a 0000:02:00.0
+##### 2. ETH Frames / Agnostic RX
+- RX (Agnostic): sudo ./traffic_engine rx -l 0 -n 4 -a 0000:02:00.0
 - TX: sudo ./traffic_engine tx -l 0 -n 4 -a 0000:02:00.0
 - KVM: sudo tcpdump -i br-test -nn -e ether proto 0x080
+
+**Note**: Agnostic RX automatically detects and displays all protocols (ICMP, UDP, TCP, ARP, DNS, ETH)
 
 ##### 3. UDP 
 ###### Note: message can be specified as argument

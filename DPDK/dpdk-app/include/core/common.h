@@ -47,6 +47,7 @@ int setup_ethernet_header(struct rte_ether_hdr *eth, const struct rte_ether_addr
 int setup_ipv4_header(struct rte_ipv4_hdr *ip, uint32_t src_ip, uint32_t dst_ip, 
                      uint8_t protocol, uint16_t payload_len);
 struct rte_mbuf* allocate_packet(struct rte_mempool *mbuf_pool, size_t total_len);
+void agnostic_rx_loop(uint16_t port_id);
 
 #define CHECK_NULL(ptr, msg) do { \
     if (!(ptr)) { \

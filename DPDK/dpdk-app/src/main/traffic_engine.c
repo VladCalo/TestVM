@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
         if (is_tx)
             eth_tx_loop(port_id, mbuf_pool, &traffic_config);
         else
-            eth_rx_loop(port_id);
+            agnostic_rx_loop(port_id);
     }
 
     return 0;

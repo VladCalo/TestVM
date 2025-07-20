@@ -78,10 +78,9 @@ static void setup_dns_query(struct dns_query *query, const char *domain) {
     query->qclass = rte_cpu_to_be_16(DNS_CLASS_IN);
 }
 
-void dns_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool, traffic_config_t *traffic_config) {
+void dns_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool, traffic_config_t *traffic_config, const char *domain) {
     const struct rte_ether_addr src_mac = {SRC_MAC};
     const struct rte_ether_addr dst_mac = {DST_MAC};
-    const char *domain = "example.com";
     uint16_t dns_id = 0x1234;
     
     LOG_INFO("Starting DNS TX loop on port %d", port_id);

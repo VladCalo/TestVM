@@ -14,13 +14,12 @@
 
 
 
-void udp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool, traffic_config_t *traffic_config) {
+void udp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool, traffic_config_t *traffic_config, const char *message) {
     const struct rte_ether_addr src = {SRC_MAC};
     const struct rte_ether_addr dst = {DST_MAC};
     
     while (1) {
-        const char *msg = "Hello via UDP!";
-        const size_t payload_len = strlen(msg) + 1;
+        const size_t payload_len = strlen(message) + 1;
         const size_t total_len = sizeof(struct rte_ether_hdr) + 
                                 sizeof(struct rte_ipv4_hdr) +
                                 sizeof(struct rte_udp_hdr) + payload_len;
@@ -44,10 +43,10 @@ void udp_tx_loop(uint16_t port_id, struct rte_mempool *mbuf_pool, traffic_config
         udp_hdr->dgram_cksum = 0;
 
         char *payload = (char *)(udp_hdr + 1);
-        memcpy(payload, msg, payload_len);
+        memcpy(payload, message, payload_len);
 
         rte_eth_tx_burst(port_id, 0, &mbuf, 1);
-        LOG_INFO("UDP: Sent packet with payload: %s", msg);
+        LOG_INFO("UDP: Sent packet with payload: %s", message);
         apply_traffic_delay(traffic_config);
     }
 }

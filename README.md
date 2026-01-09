@@ -1,5 +1,4 @@
-# Network Traffic Testing Framework
-# Master’s dissertation
+# Network Traffic Testing Framework, Master’s dissertation
 
 A practical solution for automated network protocol testing across KVM virtual machines. Uses DPDK for high-performance packet processing and Go for orchestrating traffic between VMs.
 
